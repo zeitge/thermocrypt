@@ -78,6 +78,7 @@ g++ -o thermo_core.exe thermo_core.cpp \
 ## Usage
 
 The primary engine is the Command Line Interface (CLI). The GUI is a wrapper around these commands.
+
 **1. Identity Generation** Generates a signed identity file (`.thermoid`) and an encrypted vault.
 
 ```bash
