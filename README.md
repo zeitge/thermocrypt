@@ -75,6 +75,21 @@ g++ -o thermo_core.exe thermo_core.cpp \
     -static \
     -lsodium -loqs -lws2_32
 ```
+## Deep Dive: Interactive Learning
+
+Explore the internal workings of ThermoCrypt through our interactive browser-based tools:
+
+### 1. System Architecture
+**[Interactive Flowchart](https://zeitge.github.io/thermocrypt/flowchart.html)**:
+A complete visual map of the cryptographic data flow. Click on any node (Generation, Encryption, Decryption) to see technical implementation details, memory security measures (RAII/mlock), and specific algorithms used.
+
+### 2. Hands-on Experience
+**[CLI Simulator](https://zeitge.github.io/thermocrypt/simulator.html)**:
+Simulate how ThermoCrypt works. Use this web-based terminal simulator to run `gen`, `encrypt`, and `decrypt` commands and see exactly what happens under the hood.
+
+### 3. Cryptographic Implementation
+**[Hybrid KDF Lab](https://zeitge.github.io/thermocrypt/hybrid.html)**:
+Visualize the "Hybrid" aspect of the protocol. This lab demonstrates how the Post-Quantum shared secret (Kyber) and the Classic shared secret (X25519) are cryptographically mixed (Blake2b) to derive the final Master Key.
 
 ## Usage
 
