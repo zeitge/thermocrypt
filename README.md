@@ -2,6 +2,7 @@
 
 ![Status](https://img.shields.io/badge/Project%20Status-Research%20Artifact-lightgrey)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-blue)
+[![Architecture](https://img.shields.io/badge/Architecture-Interactive_Diagram-2ea44f)](https://zeitge.github.io/thermocrypt/flowchart.html)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## Abstract
