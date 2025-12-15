@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThermoCrypt Flowchart</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .node {
+      cursor: pointer !important;
+    }
+    .node rect, .node circle, .node polygon {
+      transition: all 0.2s ease;
+    }
+    .node:hover rect, .node:hover circle, .node:hover polygon {
+      filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.5));
+      stroke: #3498db !important;
+      stroke-width: 3px !important;
+    }
+    .node.selected rect, .node.selected circle, .node.selected polygon {
+      fill: #e8f4f8 !important;
+      stroke: #2c3e50 !important;
+      stroke-width: 4px !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+
+  <header class="bg-slate-800 text-white p-6 shadow-md z-10">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight">ThermoCrypt <span class="text-blue-400">Flowchart</span></h1>
+        <h2 class="text-sm text-slate-400 mt-1">Hybrid Post-Quantum Architecture Explorer (ML-KEM-768 + X25519)</h2>
+      </div>
+      <div class="text-xs text-slate-500 text-right hidden sm:block">
+        v1.0.0<br>Click diagram nodes to inspect
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="bg-white border-b border-gray-200 shadow-sm">
+      <div class="max-w-7xl mx-auto flex">
+        <button class="tab-btn px-6 py-4 font-semibold text-sm border-b-2 border-transparent hover:bg-gray-50 transition-colors text-blue-600 border-blue-600 active" data-tab="gen">
+          1. Identity Generation
+        </button>
+        <button class="tab-btn px-6 py-4 font-semibold text-sm border-b-2 border-transparent hover:bg-gray-50 transition-colors text-gray-500 hover:text-gray-700" data-tab="enc">
+          2. Encryption Flow
+        </button>
+        <button class="tab-btn px-6 py-4 font-semibold text-sm border-b-2 border-transparent hover:bg-gray-50 transition-colors text-gray-500 hover:text-gray-700" data-tab="dec">
+          3. Decryption Flow
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 relative overflow-hidden bg-gray-100">
+      <div id="gen" class="panel absolute inset-0 flex flex-col md:flex-row transition-opacity duration-300 opacity-100 z-10">
+        <div class="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-50">
+          <div class="mermaid-container w-full max-w-3xl transform origin-top transition-transform">
+            <div class="mermaid">
+              %%{init: {'flowchart': {'curve': 'linear'}}}%%
+              flowchart TD
+                GenA["Start: generate_identity_v4"]:::start
+                GenSec["Init Secure Memory:<br/>• mlock (No Swap)<br/>• sodium_init"]:::memsec
+                GenB["Enter Password"]:::input
+                GenC["Generate Keypair:<br/>• ML-KEM-768 (PQ)<br/>• X25519 (Classic)<br/>• ML-DSA-65 (Signing)"]:::process
+                GenD["Composite Public Key Blob<br/>(PQ pk + X pk + Sig pk)"]:::data
+                GenE["Sign Public Blob with ML-DSA-65"]:::process
+                GenF["Generate Random DEK (32 bytes)"]:::process
+                GenG{"TPM Mode Enabled?"}:::decision
+                GenH["TPM: Create RSA Key in TPM<br/>Encrypt DEK via TPM (OAEP)"]:::tpm
+                GenI["Argon2id -> KEK from pass + salt<br/>Encrypt DEK via XChaCha20"]:::disk
+                GenJ["Save sealed DEK to resonance.vault"]:::storage
+                GenK["Encrypt Private Keys (priv_blob)<br/>using DEK -> enc_priv"]:::process
+                GenL["Save to vault: sealed_dek || nonce || enc_priv"]:::storage
+                GenM["Create Header with HMAC (from pass)<br/>and Public Blob Fingerprint"]:::process
+                GenN["Write .thermoid file:<br/>Header || pub_keys || signature"]:::output
+                GenWipe["RAII Destructors:<br/>Wipe Plaintext Keys (sodium_memzero)"]:::memsec
+                GenO["Done: Identity Ready"]:::finish
+
+                GenA --> GenSec
+                GenSec --> GenB
+                GenB --> GenC
+                GenC --> GenD
+                GenD --> GenE
+                GenE --> GenF
+                GenF --> GenG
+                GenG -- "Yes" --> GenH
+                GenG -- "No (Disk)" --> GenI
+                GenH --> GenJ
+                GenI --> GenJ
+                GenJ --> GenK
+                GenK --> GenL
+                GenL --> GenM
+                GenM --> GenN
+                GenN --> GenWipe
+                GenWipe --> GenO
+
+                click GenA callNode
+                click GenSec callNode
+                click GenB callNode
+                click GenC callNode
+                click GenD callNode
+                click GenE callNode
+                click GenF callNode
+                click GenG callNode
+                click GenH callNode
+                click GenI callNode
+                click GenJ callNode
+                click GenK callNode
+                click GenL callNode
+                click GenM callNode
+                click GenN callNode
+                click GenWipe callNode
+                click GenO callNode
+
+                classDef start fill:#ecf0f1,stroke:#2c3e50,stroke-width:2px;
+                classDef finish fill:#27ae60,stroke:#2ecc71,color:white;
+                classDef process fill:#fff,stroke:#3498db,stroke-width:2px;
+                classDef decision fill:#fff,stroke:#f1c40f,stroke-width:2px;
+                classDef tpm fill:#e8f8f5,stroke:#16a085,stroke-dasharray: 5 5;
+                classDef disk fill:#fdfefe,stroke:#95a5a6,stroke-dasharray: 5 5;
+                classDef data fill:#ebf5fb,stroke:#3498db;
+                classDef output fill:#f9ebea,stroke:#e74c3c;
+                classDef memsec fill:#2c3e50,stroke:#e74c3c,color:#ecf0f1,stroke-width:2px,stroke-dasharray: 5 5;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="enc" class="panel absolute inset-0 flex flex-col md:flex-row transition-opacity duration-300 opacity-0 pointer-events-none">
+         <div class="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-50">
+           <div class="mermaid-container w-full max-w-3xl">
+             <div class="mermaid">
+               %%{init: {'flowchart': {'curve': 'linear'}}}%%
+               flowchart TD
+                EncA["Start: encrypt_stream_v3"]:::start
+                EncB["Read Recipient .thermoid"]:::input
+                EncC["Verify Public Key Blob Signature<br/>(ML-DSA-65)"]:::security
+                EncD["Encapsulate with ML-KEM-768<br/>-> PQ shared secret + ciphertext"]:::process
+                EncE["Generate Ephemeral X25519 Keypair"]:::process
+                EncF["X25519 (Ephemeral sk + Static pk)<br/>-> Classic shared secret"]:::process
+                EncG["Blake2b Hash (PQ ss + X ss) -> Master Key"]:::hybrid
+                EncWipe["RAII: Wipe Ephemeral Secrets<br/>(PQ ss, X ss, Eph sk)"]:::memsec
+                EncH["Init XChaCha20-Poly1305 Stream<br/>with Master Key"]:::process
+                EncI["Write File Header:<br/>THERMO_V1 || ML-KEM ct || eph X pk"]:::output
+                EncJ{"Read Input Chunks"}:::decision
+                EncK["Encrypt Chunk (Push) + Tag"]:::process
+                EncL["Finished Encrypted File (.thermo)"]:::finish
+
+                EncA --> EncB
+                EncB --> EncC
+                EncC --> EncD
+                EncD --> EncE
+                EncE --> EncF
+                EncF --> EncG
+                EncG --> EncWipe
+                EncWipe --> EncH
+                EncH --> EncI
+                EncI --> EncJ
+                EncJ --> EncK
+                EncK --> EncJ
+                EncJ -- "FINAL Tag" --> EncL
+
+                click EncA callNode
+                click EncB callNode
+                click EncC callNode
+                click EncD callNode
+                click EncE callNode
+                click EncF callNode
+                click EncG callNode
+                click EncWipe callNode
+                click EncH callNode
+                click EncI callNode
+                click EncJ callNode
+                click EncK callNode
+                click EncL callNode
+
+                classDef start fill:#ecf0f1,stroke:#2c3e50;
+                classDef finish fill:#27ae60,stroke:#2ecc71,color:white;
+                classDef process fill:#fff,stroke:#3498db;
+                classDef hybrid fill:#8e44ad,stroke:#9b59b6,color:white;
+                classDef security fill:#f39c12,stroke:#d35400,color:white;
+                classDef memsec fill:#2c3e50,stroke:#e74c3c,color:#ecf0f1,stroke-width:2px,stroke-dasharray: 5 5;
+             </div>
+           </div>
+         </div>
+      </div>
+
+      <div id="dec" class="panel absolute inset-0 flex flex-col md:flex-row transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="flex-1 overflow-auto p-4 md:p-8 flex justify-center bg-gray-50">
+          <div class="mermaid-container w-full max-w-3xl">
+            <div class="mermaid">
+              %%{init: {'flowchart': {'curve': 'linear'}}}%%
+              flowchart TD
+                DecA["Start: decrypt_logic_v4"]:::start
+                DecAnti["Anti-Forensics:<br/>• Debugger Check (ptrace)"]:::memsec
+                DecB["Enter Password"]:::input
+                DecC["Read Own .thermoid -> Header"]:::input
+                DecD["Verify Header HMAC with Password"]:::security
+                DecE{"Read resonance.vault"}:::storage
+                DecF{"Binding Type?"}:::decision
+                DecG["TPM: Decrypt Sealed DEK (RSA)"]:::tpm
+                DecH["Disk: Argon2id -> KEK<br/>Decrypt Sealed DEK"]:::disk
+                DecI["Retrieve DEK (32 bytes)"]:::process
+                DecJ["Decrypt priv_blob with DEK<br/>-> PQ sk + X sk"]:::security
+                DecK["Read File: THERMO_V1 + Keys + Header"]:::input
+                DecL["Decapsulate ML-KEM ct (PQ sk)<br/>-> PQ shared secret"]:::process
+                DecM["X25519 (Eph pk + Own sk)<br/>-> Classic shared secret"]:::process
+                DecN["Blake2b Hash (PQ ss + X ss) -> Master Key"]:::hybrid
+                DecO["Init Secretstream Pull"]:::process
+                DecP{"Read Chunks"}:::decision
+                DecQ["Decrypt Chunk (Pull)"]:::process
+                DecWipe["RAII: Wipe Master Key &<br/>Priv Keys immediately"]:::memsec
+                DecR["Decryption Successful"]:::finish
+
+                DecA --> DecAnti
+                DecAnti --> DecB
+                DecB --> DecC
+                DecC --> DecD
+                DecD --> DecE
+                DecE --> DecF
+                DecF -- "TPM" --> DecG
+                DecF -- "Disk" --> DecH
+                DecG --> DecI
+                DecH --> DecI
+                DecI --> DecJ
+                DecJ --> DecK
+                DecK --> DecL
+                DecL --> DecM
+                DecM --> DecN
+                DecN --> DecO
+                DecO --> DecP
+                DecP --> DecQ
+                DecQ --> DecP
+                DecP -- "FINAL Tag OK" --> DecWipe
+                DecWipe --> DecR
+
+                click DecA callNode
+                click DecAnti callNode
+                click DecB callNode
+                click DecC callNode
+                click DecD callNode
+                click DecE callNode
+                click DecF callNode
+                click DecG callNode
+                click DecH callNode
+                click DecI callNode
+                click DecJ callNode
+                click DecK callNode
+                click DecL callNode
+                click DecM callNode
+                click DecN callNode
+                click DecO callNode
+                click DecP callNode
+                click DecQ callNode
+                click DecWipe callNode
+                click DecR callNode
+
+                classDef start fill:#ecf0f1,stroke:#2c3e50;
+                classDef finish fill:#27ae60,stroke:#2ecc71,color:white;
+                classDef hybrid fill:#8e44ad,stroke:#9b59b6,color:white;
+                classDef security fill:#c0392b,stroke:#e74c3c,color:white;
+                classDef memsec fill:#2c3e50,stroke:#e74c3c,color:#ecf0f1,stroke-width:2px,stroke-dasharray: 5 5;
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="details-sidebar" class="w-full md:w-96 bg-white border-l border-gray-200 shadow-xl overflow-y-auto transform transition-transform z-20 absolute right-0 top-0 bottom-0 flex flex-col">
+        <div class="p-6">
+           <div id="default-msg" class="text-center text-gray-400 mt-10">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+              </svg>
+              <p class="text-lg font-medium">Interactive Diagram</p>
+              <p class="text-sm mt-2">Click on any node in the diagram to view in-depth technical details.</p>
+           </div>
+
+           <div id="detail-content" class="hidden">
+              <div class="flex items-center gap-2 mb-4">
+                  <span id="detail-id" class="text-xs font-mono font-bold bg-slate-100 px-2 py-1 rounded text-slate-500">ID</span>
+                  <span id="detail-type" class="text-xs font-bold uppercase tracking-wider text-blue-500 border border-blue-200 px-2 py-1 rounded-full">Process</span>
+              </div>
+              <h3 id="detail-title" class="text-2xl font-bold text-gray-800 mb-4 leading-tight">Step Title</h3>
+              <div id="detail-body" class="prose prose-sm prose-slate text-gray-600">
+              </div>
+           </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const nodeDetails = {
+      'GenA': {
+        title: 'Start Generation',
+        type: 'Initialization',
+        body: `<p>The entry point for <code>generate_identity_v4</code>. This function initializes the cryptographic libraries (libsodium, OQS) and checks CPU feature flags (AVX2/AVX512) to ensure hardware acceleration is available for the heavy math operations.</p>`
+      },
+      'GenSec': {
+        title: 'Secure Memory Initialization',
+        type: 'Secure Memory',
+        body: `<p>Before generating any keys, we protect the process memory. <br>1. <strong>mlock:</strong> We instruct the OS to "lock" our RAM pages. This prevents sensitive keys from being swapped out to the hard drive (swapfile) where they could be recovered forensically.<br>2. <strong>sodium_init:</strong> Initializes the secure memory allocator which places "canary" guards around memory buffers to detect overflows.</p>`
+      },
+      'GenB': {
+        title: 'User Authentication',
+        type: 'Input',
+        body: `<p>The user is prompted for a strong password. This input is read securely (without echoing to the terminal). It serves as the entropy source for encrypting the private key vault if a TPM is not available, or as an authorization token if a TPM is used.</p>`
+      },
+      'GenC': {
+        title: 'Hybrid Key Generation',
+        type: 'Cryptography',
+        body: `
+          <p>This is the core of Thermocrypt's "Defense in Depth" strategy. We generate three distinct keys simultaneously:</p>
+          <ul class="list-disc pl-5 space-y-2 mt-2">
+            <li><strong>ML-KEM-768 (Kyber):</strong> A Post-Quantum Key Encapsulation Mechanism chosen by NIST. It relies on the "Module Learning with Errors" (MLWE) problem, which is believed to be hard even for quantum computers.</li>
+            <li><strong>X25519:</strong> A classic Elliptic Curve Diffie-Hellman key. Extremely fast and secure against current computers. If the mathematical assumptions behind Kyber fail in the future, this key keeps data secure against classic attacks.</li>
+            <li><strong>ML-DSA-65 (Dilithium):</strong> A Post-Quantum digital signature key used to sign the public key blob, ensuring no one can tamper with your identity keys.</li>
+          </ul>
+        `
+      },
+      'GenD': {
+        title: 'Composite Public Key Blob',
+        type: 'Data Structure',
+        body: `<p>We serialize the public parts of all three keys into a single binary blob. This allows a sender to fetch just one "Identity" object that contains everything needed for both secure encryption (KEM+ECDH) and verification (DSA).</p>`
+      },
+      'GenE': {
+        title: 'Identity Self-Signing',
+        type: 'Integrity',
+        body: `<p>The newly generated identity signs its own public key blob using its own private ML-DSA-65 key. This proves ownership of the private key and prevents "key substitution" attacks where an attacker might try to present a fake public key as yours.</p>`
+      },
+      'GenF': {
+        title: 'DEK Generation',
+        type: 'Key Management',
+        body: `<p>The <strong>Data Encryption Key (DEK)</strong> is a 32-byte random value generated using the system's cryptographically secure pseudo-random number generator (CSPRNG). This key effectively "locks" the private key vault. We never store this key in plain text on the disk.</p>`
+      },
+      'GenG': {
+        title: 'Hardware Binding Check',
+        type: 'Logic',
+        body: `<p>The system checks if a Trusted Platform Module (TPM 2.0) is available and initialized. Using a TPM binds the cryptographic identity to the <em>specific physical device</em>. Even if a hacker steals the hard drive, they cannot decrypt the private keys because the unlocking key is trapped inside the motherboard's security chip.</p>`
+      },
+      'GenH': {
+        title: 'TPM Sealing',
+        type: 'Hardware Security',
+        body: `<p>We ask the TPM to create a restricted RSA key pair (Object type: <code>TPMA_OBJECT_FIXEDTPM</code>). We then encrypt the DEK using this TPM-resident key using the <strong>RSA-OAEP</strong> scheme. The TPM will only decrypt this DEK later if the user is authenticated.</p>`
+      },
+      'GenI': {
+        title: 'Software Fallback (Argon2id)',
+        type: 'Classic Security',
+        body: `<p>If no TPM is available, we fall back to password-based encryption. We use <strong>Argon2id</strong>, a memory-hard hashing function that is resistant to GPU-cracking farms. We derive a Key Encryption Key (KEK) from the user's password and use it to encrypt the DEK with XChaCha20-Poly1305.</p>`
+      },
+      'GenJ': {
+        title: 'Vault Preparation',
+        type: 'Storage',
+        body: `<p>The encrypted DEK (whether from TPM or Argon2id) is prepared for storage. This is the "Key to the Kingdom". Without decrypting this blob, the actual private keys are mathematically inaccessible.</p>`
+      },
+      'GenK': {
+        title: 'Private Key Encryption',
+        type: 'Encryption',
+        body: `<p>The sensitive private keys (ML-KEM secret, X25519 secret, ML-DSA secret) are serialized into a binary blob and encrypted using the DEK via XChaCha20-Poly1305. This authenticated encryption ensures both confidentiality and integrity.</p>`
+      },
+      'GenL': {
+        title: 'Vault Finalization',
+        type: 'Storage',
+        body: `<p>We assemble the final <code>resonance.vault</code> file structure. It contains the version metadata, the sealed DEK, the nonce used for encryption, and the encrypted private key blob.</p>`
+      },
+      'GenM': {
+        title: 'Header HMAC Generation',
+        type: 'Integrity',
+        body: `<p>To allow the system to verify the password <em>before</em> attempting costly decryption, we generate a Hash-based Message Authentication Code (HMAC) of the file header using a key derived from the password. This allows for instant "Wrong Password" feedback.</p>`
+      },
+      'GenN': {
+        title: 'Write Public Identity',
+        type: 'I/O',
+        body: `<p>The public parts of the identity (the keys required for others to send you messages) are written to a separate <code>.thermoid</code> file. This file is safe to share publicly.</p>`
+      },
+      'GenWipe': {
+        title: 'RAII & Memory Zeroization',
+        type: 'Secure Memory',
+        body: `<p>This is where C++ <strong>RAII (Resource Acquisition Is Initialization)</strong> shines. We wrap all sensitive keys in custom "Guard" classes. When these objects go out of scope (are no longer needed), their destructors automatically trigger <code>sodium_memzero</code>. This overwrites the RAM location with zeros immediately, preventing "Cold Boot" attacks or accidental leaks.</p>`
+      },
+      'GenO': {
+        title: 'Generation Complete',
+        type: 'Status',
+        body: `<p>The process finishes successfully. The user now has a <code>resonance.vault</code> (private) and a <code>.thermoid</code> (public) file. The process exit code is 0.</p>`
+      },
+      'EncA': {
+        title: 'Start Encryption',
+        type: 'Initialization',
+        body: `<p>Entry point for <code>encrypt_stream_v3</code>. Sets up the libsodium environment and prepares buffers for streaming encryption to handle large files efficiently.</p>`
+      },
+      'EncB': {
+        title: 'Read Recipient Identity',
+        type: 'I/O',
+        body: `<p>Reads the recipient's public <code>.thermoid</code> file. This file contains the ML-KEM-768 public key, X25519 public key, and the ML-DSA-65 signature.</p>`
+      },
+      'EncC': {
+        title: 'Identity Verification',
+        type: 'Authentication',
+        body: `<p>Before encrypting any data, we verify the recipient's identity file. We check the ML-DSA-65 signature embedded in the file against the public keys contained within it. This prevents "Man-in-the-Middle" attacks where an attacker substitutes their key for the intended recipient's.</p>`
+      },
+      'EncD': {
+        title: 'Post-Quantum Encapsulation',
+        type: 'Cryptography',
+        body: `<p>We use the recipient's ML-KEM-768 public key to "encapsulate" a shared secret. This produces two things: <br>1. A <strong>PQ Shared Secret</strong> (held in memory).<br>2. A <strong>Ciphertext</strong> (to be sent to the recipient).</p>`
+      },
+      'EncE': {
+        title: 'Ephemeral Key Gen',
+        type: 'Cryptography',
+        body: `<p>We generate a temporary (ephemeral) X25519 keypair specifically for this one file encryption session. This ensures "Forward Secrecy" for the classic component—even if the sender's long-term key was somehow compromised later (though sender keys aren't used here), each session is unique.</p>`
+      },
+      'EncF': {
+        title: 'Classic Key Agreement',
+        type: 'Cryptography',
+        body: `<p>We perform an X25519 Diffie-Hellman exchange using our ephemeral private key and the recipient's static public key. This results in the <strong>Classic Shared Secret</strong>.</p>`
+      },
+      'EncG': {
+        title: 'Key Mixing (The Hybrid)',
+        type: 'Critical Step',
+        body: `<p>This is where the magic happens. We take the shared secret from the Post-Quantum algorithm and the shared secret from the Classic (X25519) algorithm and hash them together:<br><code>Master_Key = Blake2b(PQ_Secret || Classic_Secret)</code><br>This ensures that an attacker must break <strong>BOTH</strong> algorithms to recover the key.</p>`
+      },
+      'EncWipe': {
+        title: 'Ephemeral Key Destruction',
+        type: 'Secure Memory',
+        body: `<p>The PQ and Classic shared secrets are extremely sensitive but short-lived. Once the <strong>Master Key</strong> is derived, these components are wiped from memory (zeroed out) instantly. This minimizes the "attack surface" in RAM.</p>`
+      },
+      'EncH': {
+        title: 'Stream Cipher Init',
+        type: 'Cryptography',
+        body: `<p>We initialize the <code>crypto_secretstream_xchacha20poly1305</code> state using the derived Master Key. This API handles nonce management automatically and allows us to encrypt files of arbitrary size securely.</p>`
+      },
+      'EncI': {
+        title: 'Write File Header',
+        type: 'I/O',
+        body: `<p>We write the encryption header to the output file. This header contains the protocol version, the ML-KEM ciphertext (needed for the recipient to derive the PQ secret), and our ephemeral X25519 public key.</p>`
+      },
+      'EncJ': {
+        title: 'Chunk Loop',
+        type: 'Logic',
+        body: `<p>The file is read in chunks (typically 64KB). This allows Thermocrypt to encrypt multi-gigabyte files without loading the entire file into RAM, keeping the memory footprint low.</p>`
+      },
+      'EncK': {
+        title: 'Encrypt & Tag Chunk',
+        type: 'Cryptography',
+        body: `<p>Each chunk is encrypted using XChaCha20-Poly1305. A "Tag" is appended to the stream state, indicating if this is a normal chunk or the final chunk. This prevents truncation attacks (where an attacker deletes the end of a file).</p>`
+      },
+      'EncL': {
+        title: 'Encryption Finished',
+        type: 'Status',
+        body: `<p>The loop completes, the final tag is written, and the file handles are closed. The result is a <code>.thermo</code> file that can only be opened by the specific recipient.</p>`
+      },
+      'DecA': {
+        title: 'Start Decryption',
+        type: 'Initialization',
+        body: `<p>Entry point for <code>decrypt_logic_v4</code>. Initializes secure memory and hardware acceleration checks.</p>`
+      },
+      'DecAnti': {
+        title: 'Anti-Forensics & Debugger Detection',
+        type: 'Anti-Forensics',
+        body: `<p>Before any sensitive code runs, Thermocrypt checks its environment. <br>1. <strong>ptrace check:</strong> Is a debugger attaching to read memory? <br>If detected, the app terminates immediately via <code>SIGKILL</code> to protect secrets.</p>`
+      },
+      'DecB': {
+        title: 'User Authentication',
+        type: 'Input',
+        body: `<p>The user inputs their password to unlock their local identity vault. This is required to access the private keys needed for decryption.</p>`
+      },
+      'DecC': {
+        title: 'Read Header',
+        type: 'I/O',
+        body: `<p>Reads the header of the user's <code>resonance.vault</code> file to extract salt, nonces, and the HMAC signature.</p>`
+      },
+      'DecD': {
+        title: 'HMAC Header Check',
+        type: 'Integrity',
+        body: `<p>Before attempting to unlock the expensive cryptography (Argon2id or TPM), we perform a quick HMAC check on the file header using a hash of the password. This provides "Fail Fast" behavior—if the password is wrong, we stop immediately before wasting CPU cycles or TPM quota.</p>`
+      },
+      'DecE': {
+        title: 'Read Vault Data',
+        type: 'I/O',
+        body: `<p>Loads the encrypted blobs (Sealed DEK and Encrypted Private Keys) from the vault file into memory buffers.</p>`
+      },
+      'DecF': {
+        title: 'Binding Check',
+        type: 'Logic',
+        body: `<p>Determines whether the vault was locked using TPM binding or standard password-based encryption, and routes the logic accordingly.</p>`
+      },
+      'DecG': {
+        title: 'TPM Unsealing',
+        type: 'Hardware Security',
+        body: `<p>Sends the sealed DEK blob to the physical TPM chip. The TPM uses its internal private RSA key to decrypt the blob (RSA-OAEP) and returns the plaintext DEK, assuming the handle is correct and auth passes.</p>`
+      },
+      'DecH': {
+        title: 'Argon2id KEK Derivation',
+        type: 'Cryptography',
+        body: `<p>Derives the Key Encryption Key (KEK) from the user's password using Argon2id (computationally expensive to prevent brute-force). Uses this KEK to decrypt the sealed DEK.</p>`
+      },
+      'DecI': {
+        title: 'DEK Retrieval',
+        type: 'Critical State',
+        body: `<p>The 32-byte <strong>Data Encryption Key</strong> is now available in secure memory. This is the most sensitive moment in the unlocking process.</p>`
+      },
+      'DecJ': {
+        title: 'Private Key Decryption',
+        type: 'Cryptography',
+        body: `<p>Uses the DEK to decrypt the main private key blob. We now have the raw ML-KEM-768 and X25519 private keys in memory, protected by RAII guards.</p>`
+      },
+      'DecK': {
+        title: 'Read Encrypted File Header',
+        type: 'I/O',
+        body: `<p>Opens the incoming <code>.thermo</code> file and reads the header to retrieve the sender's ephemeral X25519 public key and the ML-KEM ciphertext.</p>`
+      },
+      'DecL': {
+        title: 'Decapsulation',
+        type: 'Cryptography',
+        body: `<p>Using the restored ML-KEM private key, the receiver processes the ciphertext from the file header. This mathematically reconstructs the same <strong>PQ Shared Secret</strong> that the sender generated. If the ciphertext was tampered with, this process fails securely.</p>`
+      },
+      'DecM': {
+        title: 'Classic Key Agreement',
+        type: 'Cryptography',
+        body: `<p>Performs the X25519 Diffie-Hellman handshake using the sender's ephemeral public key (from file header) and the receiver's static private key. Reconstructs the <strong>Classic Shared Secret</strong>.</p>`
+      },
+      'DecN': {
+        title: 'Key Mixing (Reconstruction)',
+        type: 'Cryptography',
+        body: `<p>Re-combines the PQ and Classic secrets via Blake2b hashing to reproduce the exact same <strong>Master Key</strong> used by the sender.</p>`
+      },
+      'DecO': {
+        title: 'Stream Init (Pull)',
+        type: 'Cryptography',
+        body: `<p>Initializes the <code>crypto_secretstream</code> in decryption mode (pull) using the Master Key. Validates the header authentication tag.</p>`
+      },
+      'DecP': {
+        title: 'Chunk Loop',
+        type: 'Logic',
+        body: `<p>Iterates through the file chunks. For each chunk, it reads the encrypted data and the authentication tag.</p>`
+      },
+      'DecQ': {
+        title: 'Decrypt & Verify Chunk',
+        type: 'Cryptography',
+        body: `<p>Decrypts the chunk using XChaCha20-Poly1305. Crucially, this step verifies the <strong>Poly1305 MAC tag</strong>. If a single bit of the file has been altered/corrupted, authentication fails immediately, and decryption aborts to prevent processing malicious data.</p>`
+      },
+      'DecWipe': {
+        title: 'Final Memory Cleanup',
+        type: 'Secure Memory',
+        body: `<p>As soon as the file is decrypted, the private keys and the derived session keys are wiped from RAM using RAII destructors. The application aims to hold secrets in memory for the absolute minimum time required to perform the math.</p>`
+      },
+      'DecR': {
+        title: 'Decryption Successful',
+        type: 'Status',
+        body: `<p>The output file is fully written and verified. The process closes file handles and exits successfully.</p>`
+      }
+    };
+
+    function getDefaultText(id) {
+      return {
+        title: `Step ${id}`,
+        type: 'Process Node',
+        body: `<p>This node is part of the Thermocrypt architecture. See the diagram for context.</p>`
+      };
+    }
+
+    window.callNode = (nodeId) => {
+      const details = nodeDetails[nodeId] || getDefaultText(nodeId);
+      
+      document.getElementById('default-msg').classList.add('hidden');
+      const contentDiv = document.getElementById('detail-content');
+      contentDiv.classList.remove('hidden');
+      
+      contentDiv.classList.remove('opacity-0');
+      contentDiv.classList.add('opacity-100');
+
+      document.getElementById('detail-id').innerText = nodeId;
+      document.getElementById('detail-type').innerText = details.type;
+      document.getElementById('detail-title').innerText = details.title;
+      document.getElementById('detail-body').innerHTML = details.body;
+    };
+    
+    mermaid.initialize({ 
+      startOnLoad: false, 
+      theme: 'base',
+      securityLevel: 'loose',
+      themeVariables: {
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        primaryColor: '#ebf8ff',
+        primaryBorderColor: '#4299e1',
+        lineColor: '#64748b'
+      }
+    });
+
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.panel');
+
+    async function renderActiveTab(tabId) {
+      const activePanel = document.getElementById(tabId);
+      const container = activePanel.querySelector('.mermaid');
+      
+      if (!container.querySelector('svg')) {
+        try {
+          const { svg, bindFunctions } = await mermaid.render(`mermaid-${tabId}`, container.textContent);
+          
+          container.innerHTML = svg;
+          
+          if(bindFunctions) {
+            bindFunctions(container);
+          }
+
+        } catch (e) {
+          console.error(e);
+          container.innerHTML = '<p class="text-red-500">Error rendering diagram</p>';
+        }
+      }
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+            t.classList.remove('text-blue-600', 'border-blue-600', 'active');
+            t.classList.add('text-gray-500', 'hover:text-gray-700', 'border-transparent');
+        });
+        tab.classList.add('text-blue-600', 'border-blue-600', 'active');
+        tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'border-transparent');
+
+        const targetId = tab.getAttribute('data-tab');
+        panels.forEach(p => {
+           if(p.id === targetId) {
+               p.classList.remove('opacity-0', 'pointer-events-none');
+               p.classList.add('opacity-100', 'z-10');
+           } else {
+               p.classList.add('opacity-0', 'pointer-events-none');
+               p.classList.remove('opacity-100', 'z-10');
+           }
+        });
+
+        document.getElementById('default-msg').classList.remove('hidden');
+        document.getElementById('detail-content').classList.add('hidden');
+
+        renderActiveTab(targetId);
+      });
+    });
+
+    renderActiveTab('gen');
+
+  </script>
+</body>
+</html>
