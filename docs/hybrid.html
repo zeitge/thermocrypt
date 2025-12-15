@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hybrid Key Mixer Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .arrow-down {
+            width: 0; height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 15px solid #475569;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div class="max-w-2xl w-full">
+        <h1 class="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-500">
+            Hybrid KDF Playground
+        </h1>
+
+        <div class="grid grid-cols-2 gap-4 mb-2">
+            <div>
+                <label class="text-xs font-bold text-purple-400 uppercase tracking-wider">Kyber Secret (32 bytes)</label>
+                <div class="relative group">
+                    <input id="input-pq" type="text" readonly class="mono w-full bg-slate-800 border border-slate-700 rounded p-3 text-xs text-purple-200 mt-2 focus:outline-none focus:border-purple-500 transition-colors" value="...">
+                    <button onclick="regen('pq')" class="absolute right-2 top-2 p-1 text-xs bg-slate-700 hover:bg-purple-600 rounded text-white">🎲</button>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-bold text-blue-400 uppercase tracking-wider">X25519 Secret (32 bytes)</label>
+                <div class="relative group">
+                    <input id="input-cl" type="text" readonly class="mono w-full bg-slate-800 border border-slate-700 rounded p-3 text-xs text-blue-200 mt-2 focus:outline-none focus:border-blue-500 transition-colors" value="...">
+                    <button onclick="regen('cl')" class="absolute right-2 top-2 p-1 text-xs bg-slate-700 hover:bg-blue-600 rounded text-white">🎲</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center my-4">
+            <div class="text-slate-500 text-4xl">+</div>
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-lg border border-dashed border-slate-600 text-center relative">
+            <div class="text-xs text-slate-400 mb-2 font-bold">CONCATENATION</div>
+            <div id="concat-view" class="mono text-[10px] break-all text-slate-300 opacity-70"></div>
+        </div>
+
+        <div class="arrow-down"></div>
+
+        <div class="bg-slate-800 p-6 rounded-xl border border-yellow-500/30 shadow-[0_0_30px_rgba(234,179,8,0.1)] relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-yellow-500/20 text-yellow-500 text-[10px] font-bold px-2 py-1 rounded-bl">KDF (Blake2b)</div>
+            
+            <label class="text-xs font-bold text-yellow-400 uppercase tracking-wider">Final Master Key (32 bytes)</label>
+            <div id="output-master" class="mono mt-2 text-lg text-yellow-300 tracking-widest break-all">
+                Calculating...
+            </div>
+        </div>
+
+        <div class="mt-8 p-4 bg-blue-900/20 rounded border border-blue-500/20 text-xs text-blue-200 leading-relaxed">
+            <strong>If an attacker cracks the Kyber key (Purple),</strong> they still only have the first half of the input. Because cryptographic hash functions like Blake2b are "one-way" and require the <em>entire</em> correct input to produce the correct output, the Master Key remains completely secure unless <strong>both</strong> inputs are compromised.
+        </div>
+
+    </div>
+
+    <script>
+        
+        function randHex(bytes) {
+            const arr = new Uint8Array(bytes);
+            crypto.getRandomValues(arr);
+            return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+        }
+
+        async function deriveKey() {
+            const pq = document.getElementById('input-pq').value;
+            const cl = document.getElementById('input-cl').value;
+
+            document.getElementById('concat-view').innerHTML = `<span class="text-purple-400">${pq}</span><span class="text-blue-400">${cl}</span>`;
+
+            // Hash it
+            const msgBuffer = new TextEncoder().encode(pq + cl);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            document.getElementById('output-master').innerText = hashHex;
+        }
+
+        function regen(type) {
+            if(type === 'pq') document.getElementById('input-pq').value = randHex(32);
+            if(type === 'cl') document.getElementById('input-cl').value = randHex(32);
+            deriveKey();
+        }
+
+        // Init
+        regen('pq');
+        regen('cl');
+    </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermocrypt CLI Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+        .terminal-font { font-family: 'Fira Code', monospace; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-4xl w-full space-y-4">
+        
+        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-xl">
+            <h1 class="text-2xl font-bold text-blue-400 mb-2">ThermoCrypt Learning Simulator</h1>
+            <p class="text-slate-300 mb-4">
+                Experience how Post-Quantum Cryptography works in practice. Click the missions below to execute commands in the virtual shell.
+            </p>
+            
+            <div class="flex flex-wrap gap-2">
+                <button onclick="runScenario('gen')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold transition-colors shadow-lg shadow-blue-500/20">
+                    Mission 1: Create Identity
+                </button>
+                <button onclick="runScenario('enc')" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm font-bold transition-colors shadow-lg shadow-purple-500/20">
+                    Mission 2: Encrypt File
+                </button>
+                <button onclick="runScenario('dec')" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-sm font-bold transition-colors shadow-lg shadow-green-500/20">
+                    Mission 3: Decrypt
+                </button>
+                <button onclick="clearTerm()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-sm transition-colors ml-auto border border-slate-600">
+                    Clear Screen
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-black rounded-lg shadow-2xl overflow-hidden border border-slate-700 flex flex-col" style="height: 500px;">
+            <div class="bg-slate-800 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2 text-xs text-slate-400 font-mono">user@thermocrypt-lab: ~</span>
+            </div>
+
+            <div id="terminal" class="flex-1 p-4 terminal-font text-sm overflow-y-auto whitespace-pre-wrap text-green-400">
+                <div class="opacity-50 mb-4">Welcome to ThermoCrypt Interactive Shell v1.0.0<br>Type 'help' or create an identity to start.<br>-----------------------------------------------</div>
+                <div id="output"></div>
+                <div class="flex">
+                    <span class="text-blue-400 mr-2">➜</span>
+                    <span class="text-white mr-2">~</span>
+                    <span id="typing-area"></span><span class="blink">_</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="explanation" class="hidden bg-yellow-50/5 border-l-4 border-yellow-400 p-4 rounded text-slate-300 text-sm animate-fade-in">
+        </div>
+
+    </div>
+
+    <script>
+        const termOutput = document.getElementById('output');
+        const typingArea = document.getElementById('typing-area');
+        const explanationBox = document.getElementById('explanation');
+        let isTyping = false;
+
+        function clearTerm() {
+            termOutput.innerHTML = '';
+            explanationBox.classList.add('hidden');
+        }
+
+        async function typeText(text, speed = 30) {
+            return new Promise(resolve => {
+                isTyping = true;
+                let i = 0;
+                typingArea.textContent = "";
+                const interval = setInterval(() => {
+                    typingArea.textContent += text.charAt(i);
+                    i++;
+                    if (i > text.length - 1) {
+                        clearInterval(interval);
+                        isTyping = false;
+                        const line = document.createElement('div');
+                        line.innerHTML = `<span class="text-blue-400 mr-2">➜</span><span class="text-white mr-2">~</span>${text}`;
+                        termOutput.appendChild(line);
+                        typingArea.textContent = "";
+                        resolve();
+                    }
+                }, speed);
+            });
+        }
+
+        function printLine(text, color = "text-slate-300", delay = 0) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    const div = document.createElement('div');
+                    div.className = color;
+                    div.innerHTML = text;
+                    termOutput.appendChild(div);
+                    const terminal = document.getElementById('terminal');
+                    terminal.scrollTop = terminal.scrollHeight;
+                    resolve();
+                }, delay);
+            });
+        }
+
+        async function runScenario(type) {
+            if (isTyping) return;
+            
+            if (type === 'gen') {
+                explanationBox.classList.remove('hidden');
+                explanationBox.innerHTML = "<strong class='text-yellow-400'>What's happening?</strong> We are creating a new cryptographic identity. In the background, three keys are generated: A Kyber key (Post-Quantum), an X25519 key (Classic), and a Dilithium key (Signing). Everything is locked in RAM (mlock) for security.";
+                
+                await typeText("./thermo_core --gen alice");
+                await printLine("Initializing secure memory (sodium_init)... [OK]", "text-green-500", 200);
+                await printLine("Locking process memory (mlock)... [OK]", "text-green-500", 400);
+                await printLine("Generating ML-KEM-768 keypair... [DONE]", "text-slate-300", 800);
+                await printLine("Generating X25519 keypair... [DONE]", "text-slate-300", 1200);
+                await printLine("Generating ML-DSA-65 signature keys... [DONE]", "text-slate-300", 1600);
+                await printLine("Self-signing identity blob... [VERIFIED]", "text-blue-400", 2000);
+                await printLine("Enter password to seal vault: **********", "text-yellow-300", 2500);
+                await printLine("Deriving Argon2id KEK (Interactive)...", "text-slate-400", 3000);
+                await printLine("Encrypting private keys (XChaCha20-Poly1305)...", "text-slate-400", 4000);
+                await printLine("Wiping plain-text keys from RAM... [SECURE]", "text-red-400", 4500);
+                await printLine("Identity 'alice' created successfully.", "text-green-400 font-bold", 5000);
+                await printLine("Files created: keys/alice.thermoid (Public), keys/alice/resonance.vault (Private)", "text-slate-500", 5200);
+            }
+
+            if (type === 'enc') {
+                explanationBox.classList.remove('hidden');
+                explanationBox.innerHTML = "<strong class='text-yellow-400'>What's happening?</strong> We encrypt 'secret.txt' so only Bob can read it. We use 'Hybrid' encryption: The data is secure only if the attacker can break BOTH the classic AND the quantum algorithm simultaneously.";
+
+                await typeText("./thermo_core --encrypt secret.txt keys/bob.thermoid");
+                await printLine("Reading recipient identity: keys/bob.thermoid", "text-slate-300", 200);
+                await printLine("Verifying ML-DSA-65 signature... [VALID]", "text-green-500", 600);
+                await printLine("Encapsulating Kyber Secret (PQC)...", "text-purple-400", 1000);
+                await printLine("Performing X25519 Handshake (Classic)...", "text-blue-400", 1500);
+                await printLine("Mixing keys (Blake2b)... Master Key Derived.", "text-yellow-300", 2000);
+                await printLine("Initializing XChaCha20 Stream...", "text-slate-300", 2500);
+                await printLine("Encrypting chunk 1/1 (42 bytes)...", "text-slate-500", 3000);
+                await printLine("[+] File encrypted successfully.", "text-green-400 font-bold", 3500);
+                await printLine("Output: secret.txt.thermo", "text-slate-300", 3600);
+            }
+
+            if (type === 'dec') {
+                explanationBox.classList.remove('hidden');
+                explanationBox.innerHTML = "<strong class='text-yellow-400'>What's happening?</strong> Alice receives an encrypted file. First, the program verifies the password (HMAC). Then, it unlocks the vault and uses the keys to reconstruct the exact same Master Key used by the sender.";
+
+                await typeText("./thermo_core --decrypt secret.txt.thermo alice");
+                await printLine("Anti-forensics check... [SECURE]", "text-green-500", 200);
+                await printLine("Password for alice: **********", "text-yellow-300", 1000);
+                await printLine("Verifying Vault HMAC... [OK]", "text-green-500", 1500);
+                await printLine("Unlocking Vault (Argon2id)...", "text-slate-300", 2500);
+                await printLine("Decapsulating Kyber Ciphertext...", "text-purple-400", 3500);
+                await printLine("Reconstructing Master Key...", "text-yellow-300", 4000);
+                await printLine("Verifying Poly1305 Auth Tag... [VALID]", "text-green-500", 4500);
+                await printLine("Decrypting stream...", "text-slate-300", 5000);
+                await printLine("[+] File decrypted successfully.", "text-green-400 font-bold", 5500);
+            }
+        }
+    </script>
+</body>
+</html>
